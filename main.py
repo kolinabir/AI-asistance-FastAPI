@@ -1,14 +1,19 @@
 from typing import List, Optional
-
-from fastapi import FastAPI
+import os
+from fastapi import FastAPI, File, UploadFile, HTTPException
+from dotenv import load_dotenv
 from openai import AsyncOpenAI
 from openai.types.beta.threads.run import RequiredAction, LastError
 from openai.types.beta.threads.run_submit_tool_outputs_params import ToolOutput
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
 
 app = FastAPI()
-
+load_dotenv()
+api_key = os.getenv("OPENAI_API_KEY")
+assistant_id = os.getenv("OPENAI_ASSISTANT_ID")
 # Configure CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -21,12 +26,13 @@ app.add_middleware(
 )
 
 client = AsyncOpenAI(
-    api_key="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",
+    api_key=api_key,
 )
-assistant_id = "asst_CcMu9hizUHuCzxB4ymdCBQ44"
+assistant_id = assistant_id
 run_finished_states = ["completed", "failed", "cancelled", "expired", "requires_action"]
 
 
+# Existing Pydantic models
 class RunStatus(BaseModel):
     run_id: str
     thread_id: str
@@ -51,6 +57,35 @@ class CreateMessage(BaseModel):
     content: str
 
 
+# New Pydantic model for file upload
+class FileUpload(BaseModel):
+    files: List[UploadFile]
+
+
+@app.get("/")
+async def read_root():
+    return {"message": "Welcome to the ChatPly"}
+
+
+# New endpoint for viewing thread history
+@app.get("/api/threads/{thread_id}/history")
+async def get_thread_history(thread_id: str):
+    # Implement logic to retrieve the history of the specified thread
+    # You may use OpenAI API or a database to fetch historical messages
+    # Return the history as a response
+    return JSONResponse(content={"message": "Thread history retrieved successfully"})
+
+
+# New endpoint for uploading files
+@app.post("/api/upload")
+async def upload_files(files: List[UploadFile] = File(...)):
+    # Process the uploaded files (e.g., save to disk, store in a database)
+    # You may customize this logic based on your specific requirements
+    # For simplicity, this example just returns a success message
+    return {"message": "Files uploaded successfully"}
+
+
+# Existing endpoints
 @app.post("/api/new")
 async def post_new():
     thread = await client.beta.threads.create()
